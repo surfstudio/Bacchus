@@ -1,9 +1,16 @@
-from VerboseConfigurer import VerboseConfigurer
+import pickle
+import pandas as pd
+from datetime import datetime
+
+from verbose_configurer import VerboseConfigurer
+
 from sklearn.base import BaseEstimator
 from sklearn.pipeline import TransformerMixin, Pipeline, FeatureUnion, Pipeline, \
                                 _transform_one, _fit_transform_one
 from sklearn.externals.joblib import Parallel, delayed
 
+
+now = lambda: datetime.now()
 
 class DFPipeline(Pipeline, VerboseConfigurer):
     def __init__(self, steps, verbose=False):
@@ -123,26 +130,28 @@ class AbstractTransformer(BaseEstimator):
 
     def _columns_to_apply(self, X):
         if len(self._columns_include) == 0 and len(self._columns_exclude) == 0:
-            return None
+            return X.columns.values
         x_columns = X.columns.values
         if len(self._columns_include) > 0:
-            result = [x for x in self._columns_include if x in x_columns]
+            result = [x for x in x_columns if x     in self._columns_include]
         else:
             result = [x for x in x_columns if x not in self._columns_exclude]
-        return X[result]
+        return result
 
     def _numeric_columns(self, X):
-        return X.select_dtypes(include=['number'])
+        return X.select_dtypes(include=['number']).columns.values
 
     def _nonnumeric_columns(self, X):
-        return X.select_dtypes(exclude=['number'])
+        return X.select_dtypes(exclude=['number']).columns.values
 
-    def _rest_columns(self, X, df):
-        return X[[c for c in X.columns.values if c not in df.columns.values]]
+    def _divide_by_type(self, X, cols):
+        nums = self._numeric_columns(X)
+        objs = self._nonnumeric_columns(X)
+        return [x for x in cols if x in nums], \
+               [x for x in cols if x in objs]
 
     # --- Pickling ---
     def _save_pickle(self, X, name=None):
-        import pickle
         if name is None:
             name = "%s.pkl" % self.class_name
         if not name.endswith('.pkl'):
@@ -151,7 +160,6 @@ class AbstractTransformer(BaseEstimator):
             pickle.dump(X, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def _load_pickle(self, filename=None):
-        import pickle
         if filename is None:
             filename = '%s.pkl' % self.class_name
         with open(filename, 'rb') as handle:

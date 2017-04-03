@@ -1,3 +1,6 @@
+from df_classes import AbstractTransformer
+
+import numpy as np
 from sklearn.ensemble import IsolationForest
 
 

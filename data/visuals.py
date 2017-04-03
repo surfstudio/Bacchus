@@ -1,4 +1,4 @@
-
+from df_classes import AbstractTransformer
 
 class Sorter(AbstractTransformer):
     def __init__(self, reset_index=True, **other):

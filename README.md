@@ -1,2 +1,13 @@
 # Bacchus
-A collection of SKLearn transformers made to build pipelines more expressive, clear and flexible.
+
+Коллекция SKLearn/Pandas-трансформеров для построения более выразительных и лаконичных пайплайнов.
+
+## Примеры
+
+Тетрадь с примерами использования есть в папке __examples__.
+
+## Подключение
+
+Перенесением файлов библиотеки в проект :)
+
+В py-файле `bacchus.py` уже есть все необходимые _import_'ы.

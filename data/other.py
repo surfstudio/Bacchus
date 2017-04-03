@@ -1,12 +1,18 @@
+from df_classes import AbstractTransformer
 
 
 class Transformer(AbstractTransformer):
-    def __init__(self, f, **other):
+    def __init__(self, f, apply_on=None, value_name='value', **other):
         super().__init__(**other)
         self.f = f
+        self.apply_on = apply_on
+        self.value_name = value_name
 
     def transform(self, X, **transform_params):
-        return self.f(X)
+        if self.apply_on is None:
+            return self.f(X)
+        kwargs = { self.value_name: lambda d: d[self.apply_on].apply(self.f) }
+        return X.assign(**kwargs)
 
 
 class SideEffectTransformer(AbstractTransformer):

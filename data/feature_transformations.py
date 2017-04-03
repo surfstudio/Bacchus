@@ -1,3 +1,5 @@
+from df_classes import AbstractTransformer
+
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
 
@@ -13,12 +15,7 @@ class Scaler(AbstractTransformer):
 
     def transform(self, X, **transform_params):
         to_scale = self._columns_to_apply(X)
-        if to_scale is None:
-            to_scale = self._numeric_columns(X)
-        else:
-            cols_ = X.select_dtypes(include=['object']).columns.values
-            to_scale = [x for x in to_scale if x not in cols_]
-        rest = self._rest_columns(X, to_scale).reset_index(drop=True)
+        to_scale, rest = self._divide_by_type(to_scale, X)
         result = rest
         self._to_scale = to_scale.columns.values
         for c in self._to_scale:
@@ -55,19 +52,20 @@ class PcaTransformer(AbstractTransformer):
     def transform(self, X, **transform_params):
         if X.shape[0] == 0 or X.shape[1] == 0:
             return X
+
         self.transformer = PCA(n_components=self.n_dim)
+
         to_scale = self._columns_to_apply(X)
-        if to_scale is None:
-            to_scale = self._numeric_columns(X)
-        rest = self._rest_columns(X, to_scale)
-        if to_scale.shape[0] == 0 or to_scale.shape[1] == 0:
+        to_scale, rest = self._divide_by_type(to_scale, X)
+
+        if to_scale.shape[0] == 0 or to_scale.shape[1] == 0 or self.n_dim > to_scale.shape[1]:
             return X
-        if self.n_dim > to_scale.shape[1]:
-            return X
+
         new_column_names = [('%s_%s' % (self.prefix, i+1)) for i in range(self.n_dim)]
-        new_data = pd.DataFrame(data=self.transformer.fit_transform(to_scale), columns=new_column_names)
-        result = pd.concat((rest, new_data), axis=1)
-        return result.reset_index(drop=True)
+        new_data = pd.DataFrame(data=self.transformer.fit_transform(X[to_scale]), \
+                                columns=new_column_names)
+        rest = X[rest].reset_index(drop=True)
+        return pd.concat((rest, new_data), axis=1).reset_index(drop=True)
 
 
 class Lagger(AbstractTransformer):
@@ -128,11 +126,7 @@ class CustomEncoder(AbstractTransformer):
         return _dict[self.encode]
 
     def transform(self, X, **transform_params):
-        to_transform = X.columns.values
-        to_transform = list(set(to_transform) \
-                            - set(self._columns_exclude) \
-                            - set(X.select_dtypes(exclude=['object']).columns.values))
-        to_transform = list(set(to_transform).union(self._columns_include))
+        to_transform = self._columns_to_apply(X)
         encoder_type = self._create_encoder()
         encoder = encoder_type(cols=to_transform)
         return encoder.fit_transform(X)
